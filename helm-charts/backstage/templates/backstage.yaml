@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backstage
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: backstage
+  template:
+    metadata:
+      labels:
+        app: backstage
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: backstage
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 7007
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secrets.postgres.name }}
+            - secretRef:
+                name: {{ .Values.secrets.backstage.name }}
+          readinessProbe:
+            httpGet:
+              port: {{ .Values.readinessProbe.port }}
+              path: {{ .Values.readinessProbe.path }}
+          livenessProbe:
+            httpGet:
+              port: {{ .Values.livenessProbe.port }}
+              path: {{ .Values.livenessProbe.path }}
+          env:
+            - name: POSTGRES_PORT
+              value: {{ .Values.env.postgres.port | quote }}
+            - name: POSTGRES_HOST
+              value: {{ .Values.env.postgres.host | quote }}
+            - name: AUTH_GOOGLE_CLIENT_ID
+              value: {{ .Values.env.auth.google.clientId | quote }}
+            - name: AUTH_GOOGLE_CLIENT_SECRET
+              value: {{ .Values.env.auth.google.clientSecret | quote }}
+            - name: KUBERNETES_URL
+              value: {{ .Values.env.kubernetes.url | quote }}
+            - name: BACKSTAGE_URL
+              value: {{ .Values.env.backstage.url | quote }}
+            - name: USER_GITHUB_USERNAME
+              value: {{ .Values.env.github.githubUsername | quote }}
+            - name: USER_EMAIL
+              value: {{ .Values.env.github.email | quote }}
+            - name: AUTH_GITHUB_CLIENT_ID
+              value: {{ .Values.env.github.clientId | quote }}
+            - name: AUTH_GITHUB_CLIENT_SECRET
+              value: {{ .Values.env.github.clientSecret | quote }}
+            - name: GITHUB_TOKEN
+              value: {{ .Values.env.github.githubToken | quote }}
+            - name: JIRA_TOKEN
+              value: {{ .Values.env.jira.token | quote }}
+            - name: JIRA_BASE_URL
+              value: {{ .Values.env.jira.baseUrl | quote }}
+            - name: JIRA_EMAIL_SUFIX
+              value: {{ .Values.env.jira.emailSufix | quote }}
+            - name: USER_AGENT
+              value: {{ .Values.env.userAgent | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.name }}
+spec:
+  selector:
+    app: {{ .Values.service.selector.app }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+
+---
+{{- if .Values.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccount.name }}
+{{- end }}
+
+---
+{{- if .Values.clusterRoleBinding.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.clusterRoleBinding.name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.serviceAccount.name }}
+    namespace: default
+roleRef:
+  apiGroup: {{ .Values.clusterRoleBinding.roleRef.apiGroup }}
+  kind: {{ .Values.clusterRoleBinding.roleRef.kind }}
+  name: {{ .Values.clusterRoleBinding.roleRef.name }}
+{{- end }}
+
+---
+{{- if .Values.secrets.postgres.create }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.secrets.postgres.name }}
+type: Opaque
+data:
+  POSTGRES_USER: {{ .Values.secrets.postgres.user }}
+  POSTGRES_PASSWORD: {{ .Values.secrets.postgres.password }}
+{{- end }}
+
+---
+
+{{- if .Values.secrets.backstage.create }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.secrets.backstage.name }}
+type: Opaque
+data:
+  GITHUB_TOKEN: {{ .Values.secrets.backstage.githubToken }}
+{{- end }}
