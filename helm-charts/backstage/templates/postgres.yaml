@@ -1,0 +1,66 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.db }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgres.password }}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: {{ .Values.postgres.service.port }}
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-storage-claim
+{{- end }}
+---
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.postgres.service.name }}
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - port: {{ .Values.postgres.service.port }}
+      targetPort: {{ .Values.postgres.service.targetPort }}
+{{- end }}
+
+---
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-storage-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.postgres.pvc.storageRequest }}
+  storageClassName: {{ .Values.postgres.pvc.storageClassName }}
+{{- end }}

@@ -1,0 +1,11 @@
+{{- if .Values.managedCertificate.enabled }}
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: bs-helm-cert
+  labels:
+    {{- include "backstage.labels" . | nindent 4 }}
+spec:
+  domains:
+    - {{ .Values.managedCertificate.domain }}
+{{- end }}
