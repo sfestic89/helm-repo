@@ -1,0 +1,104 @@
+replicaCount: 1
+
+image:
+  repository: 
+  tag: "" # Change this if needed
+  pullPolicy: Always
+
+serviceAccount:
+  create: true
+  name: backstage-service-account-helm
+
+secrets:
+  postgres:
+    create: true
+    name: postgres-secret
+    user: YmFja3N0YWdl #backstage
+    password: YmFja3N0YWdl #backstage
+  backstage:
+    create: true
+    name: backstage-secrets
+    githubToken: 
+
+env:
+  postgres:
+    host: "postgres"
+    port: "5432"
+  auth:
+    google:
+      clientId: 
+      clientSecret: 
+    github:
+      clientId:
+      clientSecret:
+  github:
+    githubUsername:
+    email:
+    clientId:
+    clientSecret:
+    githubToken:
+  kubernetes:
+    url: kubernetes.default.svc.cluster.local:443
+  backstage:
+    url: https://url
+  jira:
+    token: 
+    baseUrl: https://url
+    emailSufix: 
+  userAgent: MY-UA-STRING
+
+readinessProbe:
+  path: "/healthcheck"
+  port: 7007
+
+livenessProbe:
+  path: "/healthcheck"
+  port: 7007
+
+service:
+  name: backstage
+  port: 80
+  targetPort: 7007
+  selector:
+    app: backstage
+
+clusterRoleBinding:
+  create: true
+  name: backstage-cluster-ro-helm
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: system:aggregate-to-view
+
+managedCertificate:
+  enabled: true
+  domain: backstage-helm.de-gcloud.com
+
+ingress:
+  enabled: true
+  name: bs-ingress-helm
+  host: backstage-helm.de-gcloud.com
+  staticIpName: backstage-helm
+  managedCertificate: bs-helm-cert
+  allowHttp: false
+  service:
+    name: backstage
+    port: 80
+
+postgres:
+  enabled: true
+  db: backstage
+  user: backstage
+  password: backstage
+
+  image:
+    repository: postgres
+    tag: "13"
+  # Postgres PVC configuration
+  pvc:
+    storageRequest: 20Gi
+    storageClassName: standard
+  service:
+    name: postgres
+    port: 5432
+    targetPort: 5432
